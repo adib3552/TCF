@@ -44,7 +44,10 @@ class EnEmbedding(nn.Module):
         super(EnEmbedding, self).__init__()
         # Patching
         self.patch_len = patch_len
-        self.pre_conv = ChannelWiseConv(n_vars, kernel_size)
+        self.kernel_size = kernel_size
+        if self.kernel_size > 0:
+            self.pre_conv = ChannelWiseConv(n_vars, kernel_size)
+            self.norm = nn.BatchNorm1d(n_vars)
 
         self.value_embedding = nn.Linear(patch_len, d_model, bias=False)
         self.glb_token = nn.Parameter(torch.randn(1, n_vars, 1, d_model))
@@ -56,7 +59,11 @@ class EnEmbedding(nn.Module):
         # do patching
         batch,n_vars,temp = x.shape
         glb = self.glb_token.repeat((x.shape[0], 1, 1, 1))
-        x = self.pre_conv(x)
+        #channel wise pre conv
+        if self.kernel_size > 0:
+            x = self.pre_conv(x)
+            x = self.norm(x)
+
         x = x.unfold(dimension=-1, size=self.patch_len, step=self.patch_len)
         x = torch.reshape(x, (x.shape[0] * x.shape[1], x.shape[2], x.shape[3]))
         # Input encoding

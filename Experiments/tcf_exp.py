@@ -12,8 +12,8 @@ from tqdm import tqdm
 size = [96,48,96]
 
 train_set = Dataset_Custom(
-    root_path='C:/Users/Awsftausif/Desktop/S-Mamba_datasets/traffic/',
-    data_path='traffic.csv',
+    root_path='C:/Users/Awsftausif/Desktop/S-Mamba_datasets/electricity/',
+    data_path='electricity.csv',
     flag='train',
     size=size,
     features='M',      # 'M' = multivariate (use all features)
@@ -24,8 +24,8 @@ train_set = Dataset_Custom(
 )
 
 val_set = Dataset_Custom(
-    root_path='C:/Users/Awsftausif/Desktop/S-Mamba_datasets/traffic/',
-    data_path='traffic.csv',
+    root_path='C:/Users/Awsftausif/Desktop/S-Mamba_datasets/electricity/',
+    data_path='electricity.csv',
     flag='val',
     size=size,
     features='M',
@@ -36,8 +36,8 @@ val_set = Dataset_Custom(
 )
 
 test_set = Dataset_Custom(
-    root_path='C:/Users/Awsftausif/Desktop/S-Mamba_datasets/traffic/',
-    data_path='traffic.csv',
+    root_path='C:/Users/Awsftausif/Desktop/S-Mamba_datasets/electricity/',
+    data_path='electricity.csv',
     flag='test',
     size=size,
     features='M',
@@ -48,9 +48,9 @@ test_set = Dataset_Custom(
 )
 
 
-train_loader = DataLoader(train_set, batch_size=16, shuffle=True)
-val_loader = DataLoader(val_set, batch_size=16, shuffle=False)
-test_loader = DataLoader(test_set, batch_size=16, shuffle=False)
+train_loader = DataLoader(train_set, batch_size=32, shuffle=True)
+val_loader = DataLoader(val_set, batch_size=32, shuffle=False)
+test_loader = DataLoader(test_set, batch_size=32, shuffle=False)
 
 
 
@@ -74,14 +74,14 @@ for batch_idx, (seq_x, seq_y, seq_x_mark, seq_y_mark) in enumerate(train_loader)
 
 class Config:
     def __init__(self):
-        self.d_model = 512
-        self.d_core = 128
-        self.e_layers = 2
-        self.d_ff = 512
-        self.n_vars = 862
+        self.d_model = 128
+        self.d_core = 64
+        self.e_layers = 3
+        self.d_ff = 128
+        self.c_out = 321
         self.seq_len = 96
         self.pred_len = size[2]
-        self.kernel_size = 3
+        self.kernel_size = 0
         self.patch_len = 16
         self.n_heads = 16
         self.factor = 3
@@ -136,7 +136,6 @@ def evaluate(model, val_loader, device, pred_len):
 def test(model, test_loader, device, pred_len):
     model.eval()
     total_mse, total_mae = 0, 0
-    preds, trues = [], []
     with torch.no_grad():
         for seq_x, seq_y, seq_x_mark, seq_y_mark in tqdm(test_loader, desc="Testing", leave=False):
             seq_x = seq_x.to(device).float()
@@ -145,17 +144,12 @@ def test(model, test_loader, device, pred_len):
             outputs = model(seq_x)
             total_mse += mse_loss(outputs, target).item()
             total_mae += mae_loss(outputs, target).item()
+    return total_mse / len(test_loader), total_mae / len(test_loader), None, None
 
-            preds.append(outputs.cpu().numpy())
-            trues.append(target.cpu().numpy())
-
-    preds = np.concatenate(preds, axis=0)
-    trues = np.concatenate(trues, axis=0)
-    return total_mse / len(test_loader), total_mae / len(test_loader), preds, trues
 
 
 # ---- Main Training Loop ----
-def train_model(model, train_loader, val_loader, test_loader, pred_len, epochs=40, lr=1e-4, patience=5, device='cuda'):
+def train_model(model, train_loader, val_loader, test_loader, pred_len, epochs=40, lr=0.001, patience=5, device='cuda'):
     optimizer = optim.Adam(model.parameters(), lr=lr)
     scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=epochs)
     
