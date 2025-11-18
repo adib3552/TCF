@@ -111,7 +111,7 @@ class Dataset_Custom(Dataset):
 class Dataset_Solar(Dataset):
     def __init__(self, root_path, flag='train', size=None,
                  features='S', data_path='ETTh1.csv',
-                 target='OT', scale=True, timeenc=0, freq='h'):
+                 target='OT', scale=True, timeenc=0, freq='h', **kwargs):
         # size [seq_len, label_len, pred_len]
         # info
         self.seq_len = size[0]
@@ -138,7 +138,7 @@ class Dataset_Solar(Dataset):
         with open(os.path.join(self.root_path, self.data_path), "r", encoding='utf-8') as f:
             for line in f.readlines():
                 line = line.strip('\n').split(',')
-                data_line = np.stack([float(i) for i in line[1:]])
+                data_line = np.stack([float(i) for i in line])
                 df_raw.append(data_line)
         df_raw = np.stack(df_raw, 0)
         df_raw = pd.DataFrame(df_raw)
